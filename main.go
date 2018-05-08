@@ -1,41 +1,31 @@
 package main
 
 import (
-	"encoding/json"
 	"fmt"
-	"io/ioutil"
 	"log"
-	"net/http"
-	"net/url"
-	"os"
 
 	"image"
 	"image/color"
-	"image/gif"
 
+	"github.com/caitlin615/gif-battle/giphy"
 	"github.com/caitlin615/gif-battle/kmeans"
 )
 
-var giphyAPIKey = os.Getenv("GIPHY_API_KEY")
-
 func main() {
-	if giphyAPIKey == "" {
-		log.Fatal("missing Giphy API Key (use env var: `GIPHY_API_KEY`)")
-	}
-
-	// giphyGIF, err := randomGIPHYGIF("burrito")
+	// giphyGIF, err := giphy.Random("burrito")
 	// if err != nil {
 	// 	log.Fatal(err)
 	// }
 	// gifURL := giphyGIF.Images.DownsizedStill.URL
 	gifURL := "https://media2.giphy.com/media/jtKpyFWJrVI08/giphy.gif"
 
-	gifObject, err := GetGIF(gifURL)
+	gifObject, err := giphy.GetGIF(gifURL)
 	if err != nil {
 		log.Fatal(err)
 	}
 	frame := gifObject.Image[0]
 
+	// using most common color
 	mostUsedColor := getMostUsedColor(frame)
 	log.Println("Most used color:", colorToHex(mostUsedColor))
 
@@ -67,20 +57,9 @@ func getPixels(frame *image.Paletted) (colors []color.Color) {
 
 // getMostUsedColor returns the color that occurs most often in the image
 func getMostUsedColor(frame *image.Paletted) color.Color {
-	bounds := frame.Bounds()
-	minX := bounds.Min.X
-	minY := bounds.Min.Y
-	maxX := bounds.Max.X
-	maxY := bounds.Max.Y
-
 	colors := map[color.Color]int{}
-
-	// TODO: It's excessive to account for every pixel
-	for xIndex := minX; xIndex < maxX; xIndex++ {
-		for yIndex := minY; yIndex < maxY; yIndex++ {
-			clr := frame.At(xIndex, yIndex)
-			colors[clr]++
-		}
+	for _, clr := range getPixels(frame) {
+		colors[clr]++
 	}
 
 	if len(colors) == 0 {
@@ -98,81 +77,6 @@ func getMostUsedColor(frame *image.Paletted) color.Color {
 		}
 	}
 	return maxColor
-}
-
-// GIFRandom is the response from the random endpoint
-type GIFRandom struct {
-	Data GIPHYGIF `json:"data"`
-	Meta Meta     `json:"meta"`
-}
-
-// Meta Object contains basic information regarding the request
-type Meta struct {
-	Message    string `json:"msg"`
-	Status     int    `json:"status"`
-	ResponseID string `json:"response_id"` // A unique ID paired with this response from the API.
-}
-
-// GIPHYGIF is a GIPHY Gif object: https://developers.giphy.com/docs/#gif-object
-// Note: this doesn't include all values, only ones that seem necessary.
-type GIPHYGIF struct {
-	ID     string `json:"id"`
-	Title  string `json:"title"`
-	Images Images `json:"images"`
-}
-
-// Images is the GIPHY Images object: https://developers.giphy.com/docs/#images-object
-type Images struct {
-	DownsizedStill Image `json:"downsized_still"` // will be used for finding prominent color
-	Original       Image `json:"original"`
-}
-
-// Image is the GIPHY Image object
-type Image struct {
-	URL    string `json:"url"`
-	Frames string `json:"frames"`
-}
-
-// GIF converts an Image into a GIF from the std lib image/gif package
-func GetGIF(u string) (g *gif.GIF, err error) {
-	req, err := http.NewRequest(http.MethodGet, u, nil)
-	if err != nil {
-		return
-	}
-	req.Header.Add("Content-Type", "image/gif")
-	resp, err := http.DefaultClient.Do(req)
-	if err != nil {
-		return
-	}
-	defer resp.Body.Close()
-	return gif.DecodeAll(resp.Body)
-}
-
-func randomGIPHYGIF(keyword string) (gif GIPHYGIF, err error) {
-	query := url.Values{}
-	query.Add("api_key", giphyAPIKey)
-	query.Add("tag", keyword)
-	// query.Add("rating", "g")
-	query.Add("fmt", "json")
-
-	resp, err := http.Get("https://api.giphy.com/v1/gifs/random?" + query.Encode())
-	if err != nil {
-		return
-	}
-	defer resp.Body.Close()
-	body, err := ioutil.ReadAll(resp.Body)
-	if err != nil {
-		return
-	}
-
-	var giphyResp GIFRandom
-	if err = json.Unmarshal(body, &giphyResp); err != nil {
-		return
-	}
-	gif = giphyResp.Data
-
-	// TODO: Check meta as well for status
-	return
 }
 
 // https://github.com/pwaller/go-hexcolor
