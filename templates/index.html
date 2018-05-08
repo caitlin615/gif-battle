@@ -1,0 +1,20 @@
+{{ define "battleImage" }}
+  <img src="{{.Image.URL}}">
+  <h3>Kmeans</h3>
+  {{ range .Colors }}
+  <p style="background-color: rgba({{.R}}, {{.G}}, {{.B}}, {{.A}});">{{.}}</p>
+  {{ end }}
+
+
+  <h3>Most Common</h3>
+  {{with $c := .MostUsedColor}}
+  <p style="background-color: rgba({{$c.R}}, {{$c.G}}, {{$c.B}}, {{$c.A}});">{{$c}}</p>
+  {{end}}
+{{ end }}
+
+<html>
+<body>
+  {{template "battleImage" .Left}}
+  {{template "battleImage" .Right}}
+</body>
+</html>
