@@ -13,8 +13,32 @@
 {{ end }}
 
 <html>
+<head>
+  <title>GIF BATTLE</title>
+  <style>
+  body {
+    display: flex;
+    flex-flow: row wrap;
+    margin: auto;
+  }
+  div#left, div#right {
+    flex: 0 0 40%;
+    margin: auto;
+  }
+  img {
+    width: 100%;
+    min-width: 300px;
+    max-width: 500px;
+  }
+  </style>
+</head>
 <body>
-  {{template "battleImage" .Left}}
-  {{template "battleImage" .Right}}
+  <h1>Pick your favorite GIF and let us find your favorite color!</h1>
+  <div id="left">
+    {{template "battleImage" .Left}}
+  </div>
+  <div id="right">
+    {{template "battleImage" .Right}}
+  </div>
 </body>
 </html>
