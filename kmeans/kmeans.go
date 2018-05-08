@@ -7,19 +7,21 @@ import (
 	"time"
 )
 
+// TODO: Documentation and tests
+
 // This implemtation of k-means clustering for detecting dominant colors
 // is based on the tutorial from https://zeevgilovitz.com/detecting-dominant-colours-in-python
+// https://en.wikipedia.org/wiki/K-means_clustering
 func init() {
 	rand.Seed(time.Now().UTC().UnixNano())
 }
 
-// TODO: Rename a bunch of these variables to be more concise
 type Cluster struct {
 	Pixels   []color.Color
 	Centroid color.Color
 }
 
-func (c Cluster) AddPoint(clr color.Color) {
+func (c Cluster) AddPixel(clr color.Color) {
 	c.Pixels = append(c.Pixels, clr)
 }
 
@@ -44,6 +46,8 @@ func (c Cluster) SetNewCentroid() {
 		return sum
 	}
 
+	// FIXME: All this type conversions seems suspicious
+	// Assign the new centroid to the average off all the current pixels
 	newR := sum(rs) / uint32(len(rs))
 	newG := sum(gs) / uint32(len(gs))
 	newB := sum(bs) / uint32(len(bs))
@@ -56,9 +60,9 @@ type Kmeans struct {
 	MaxIterations int
 	MinDistance   int
 
-	Pixels      []color.Color
-	Clusters    []Cluster
-	OldClusters []color.Color
+	Pixels           []color.Color
+	Clusters         []Cluster
+	OldClusterPixels []color.Color
 }
 
 func NewKmeansClustering(k, maxIterations, minDistance int) (km Kmeans) {
@@ -69,25 +73,33 @@ func NewKmeansClustering(k, maxIterations, minDistance int) (km Kmeans) {
 	return
 }
 func (km Kmeans) Run(pixels []color.Color) []color.Color {
-	// random pixels
+	// get k random pixels to start with
 	randomPixels := make([]color.Color, km.K)
 	randInts := rand.Perm(len(pixels))
 	for r := 0; r < km.K; r++ {
 		randomPixels[r] = pixels[randInts[r]]
+		// assign the random pixel as the first centroid
 		km.Clusters[r] = Cluster{Centroid: randomPixels[r]}
 	}
 
 	iteration := 0
 	ok := true
-	for ok {
+	for {
 		ok = km.shouldExit(iteration)
-		for _, cluster := range km.Clusters {
-			km.OldClusters = append(km.OldClusters, cluster.Centroid)
+		if ok {
+			break
 		}
+		// Keep track of the current centroids
+		for _, cluster := range km.Clusters {
+			km.OldClusterPixels = append(km.OldClusterPixels, cluster.Centroid)
+		}
+
+		// Assign the pixels to the closest cluster
 		for _, clr := range km.Pixels {
 			km.assignClusters(clr)
 		}
 
+		// Recalculate the centroid
 		for _, cluster := range km.Clusters {
 			cluster.SetNewCentroid()
 		}
@@ -102,24 +114,26 @@ func (km Kmeans) Run(pixels []color.Color) []color.Color {
 }
 
 func (km Kmeans) assignClusters(clr color.Color) {
+	// Add the pixel to the cluster where it's closest to the centroid
 	shortest := math.MaxFloat64
 	nearest := km.Clusters[0]
 	for _, cluster := range km.Clusters {
-		dist := calcDistance(cluster.Centroid, clr)
+		dist := calculateDistance(cluster.Centroid, clr)
 		if dist < shortest {
 			shortest = dist
 			nearest = cluster
 		}
 	}
-	nearest.AddPoint(clr)
+	nearest.AddPixel(clr)
 }
+
 func (km Kmeans) shouldExit(i int) bool {
-	if len(km.OldClusters) == 0 {
+	if len(km.OldClusterPixels) == 0 {
 		return false
 	}
 
 	for idx := 0; idx < km.K; idx++ {
-		dist := calcDistance(km.Clusters[idx].Centroid, km.OldClusters[idx])
+		dist := calculateDistance(km.Clusters[idx].Centroid, km.OldClusterPixels[idx])
 		if dist < float64(km.MinDistance) {
 			return true
 		}
@@ -130,7 +144,8 @@ func (km Kmeans) shouldExit(i int) bool {
 	return true
 }
 
-func calcDistance(clrA, clrB color.Color) float64 {
+func calculateDistance(clrA, clrB color.Color) float64 {
+	// FIXME: This typecasting seems suspicious
 	ra, ga, ba, _ := clrA.RGBA()
 	rb, gb, bb, _ := clrB.RGBA()
 	r := math.Pow(float64(ra-rb), 2)
