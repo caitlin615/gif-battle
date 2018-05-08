@@ -1,6 +1,7 @@
 package main
 
 import (
+	"encoding/json"
 	"html/template"
 	"image/color"
 	"log"
@@ -34,12 +35,21 @@ func main() {
 			return
 		}
 
+		if err := templates.ExecuteTemplate(w, "index.html", nil); err != nil {
+			http.Error(w, err.Error(), http.StatusInternalServerError)
+			return
+		}
+	})
+
+	http.HandleFunc("/new-battle", func(w http.ResponseWriter, r *http.Request) {
 		data := templateData{
 			Left:  newBattleGif(),
 			Right: newBattleGif(),
 		}
 
-		if err := templates.ExecuteTemplate(w, "index.html", data); err != nil {
+		err := json.NewEncoder(w).Encode(&data)
+		if err != nil {
+			log.Println(err)
 			http.Error(w, err.Error(), http.StatusInternalServerError)
 			return
 		}

@@ -1,18 +1,3 @@
-{{ define "color" }}
-<p style="background-color: rgba({{.R}}, {{.G}}, {{.B}}, {{.A}}); color:{{if (lt .R 100) and (lt .G 100) and (lt .B 100)}}white{{end}};">{{.}}</p>
-{{ end }}
-
-{{ define "battleImage" }}
-  <img src="{{.Image.URL}}">
-  <h3>Kmeans</h3>
-  {{ range .Colors }}
-    {{ template "color" . }}
-  {{ end }}
-
-  <h3>Most Common</h3>
-  {{ template "color" .MostUsedColor }}
-{{ end }}
-
 <html>
 <head>
   <title>GIF BATTLE</title>
@@ -40,11 +25,79 @@
 </head>
 <body>
   <h1>Pick your favorite GIF and let us find your favorite color!</h1>
-  <div id="left">
-    {{template "battleImage" .Left}}
-  </div>
-  <div id="right">
-    {{template "battleImage" .Right}}
-  </div>
+  <div id="left"></div>
+  <div id="right"></div>
+
+  <script>
+  function battle() {
+    return new Promise(function(resolve, reject) {
+      var req = new XMLHttpRequest();
+      req.addEventListener("load", function(e) {
+        var resp = JSON.parse(req.response);
+        if (req.status !== 200) {
+          reject(req.status);
+          return;
+        }
+        console.log(resp);
+        // TODO: Return the image dimensions so gifs can be sized nicely in the DOM.
+        // seems unnecessary at this point, but might be a nice feature, especially for smaller gif sizes
+        resolve(resp);
+      });
+      req.open("GET", "/new-battle");
+      req.send();
+    });
+  }
+
+  function startBattle() {
+    function newColor(color) {
+      var p = document.createElement("p");
+      p.textContent = `r: ${color.R} g: ${color.G} b: ${color.B} a: ${color.A}`;
+      p.style.backgroundColor = `rgba(${color.R},${color.G},${color.B},${color.A})`;
+      if (color.R < 100 && color.G < 100 && color.B < 100) {
+        p.style.color = "white";
+      }
+      return p;
+    }
+    function addGif(el, data) {
+      while (el.firstChild) {
+        el.removeChild(el.firstChild);
+      }
+
+      // TODO: Show loading
+      var img = new Image();
+      img.src = data.Image.url;
+
+      // TODO: Show that it was selected
+      // TODO: Keyboard shortcuts (left, right, enter)?
+      var link = document.createElement("a");
+      link.onclick = function() {
+        // Store info on the gif that was clicked
+        console.log(img.src);
+        startBattle();
+      };
+      link.appendChild(img);
+      el.appendChild(link);
+
+      var colors = document.createElement("div");
+      colors.classList.add("colors");
+      for (var i = 0; i < data.Colors.length; i++) {
+        var color = data.Colors[i];
+        colors.appendChild(newColor(color));
+      }
+      colors.appendChild(newColor(data.MostUsedColor));
+
+      el.appendChild(colors);
+    }
+    battle().then(function(data) {
+      addGif(document.getElementById("left"), data.Left);
+      addGif(document.getElementById("right"), data.Right);
+    }).catch(function(err) {
+      // TODO: Handle this, show an error
+      throw new Error(err);
+    });
+  }
+
+  startBattle();
+  </script>
 </body>
 </html>
