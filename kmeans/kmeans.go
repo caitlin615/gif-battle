@@ -16,14 +16,14 @@ func init() {
 // TODO: Rename a bunch of these variables to be more concise
 type Cluster struct {
 	Pixels   []color.Color
-	Centroid *color.Color
+	Centroid color.Color
 }
 
-func (c *Cluster) AddPoint(clr color.Color) {
+func (c Cluster) AddPoint(clr color.Color) {
 	c.Pixels = append(c.Pixels, clr)
 }
 
-func (c *Cluster) SetNewCentroid() {
+func (c Cluster) SetNewCentroid() {
 	if len(c.Pixels) == 0 {
 		return
 	}
@@ -47,8 +47,7 @@ func (c *Cluster) SetNewCentroid() {
 	newR := sum(rs) / uint32(len(rs))
 	newG := sum(gs) / uint32(len(gs))
 	newB := sum(bs) / uint32(len(bs))
-	newCentroid := color.Color(color.RGBA{R: uint8(newR), G: uint8(newG), B: uint8(newB)})
-	c.Centroid = &newCentroid
+	c.Centroid = color.Color(color.RGBA{R: uint8(newR), G: uint8(newG), B: uint8(newB)})
 	c.Pixels = []color.Color{}
 }
 
@@ -69,16 +68,13 @@ func NewKmeansClustering(k, maxIterations, minDistance int) (km Kmeans) {
 	km.Clusters = make([]Cluster, k)
 	return
 }
-func (km *Kmeans) Run(pixels []color.Color) []color.Color {
+func (km Kmeans) Run(pixels []color.Color) []color.Color {
 	// random pixels
 	randomPixels := make([]color.Color, km.K)
 	randInts := rand.Perm(len(pixels))
 	for r := 0; r < km.K; r++ {
 		randomPixels[r] = pixels[randInts[r]]
-		cluster := Cluster{
-			Centroid: &randomPixels[r],
-		}
-		km.Clusters[r] = cluster
+		km.Clusters[r] = Cluster{Centroid: randomPixels[r]}
 	}
 
 	iteration := 0
@@ -86,7 +82,7 @@ func (km *Kmeans) Run(pixels []color.Color) []color.Color {
 	for ok {
 		ok = km.shouldExit(iteration)
 		for _, cluster := range km.Clusters {
-			km.OldClusters = append(km.OldClusters, *cluster.Centroid)
+			km.OldClusters = append(km.OldClusters, cluster.Centroid)
 		}
 		for _, clr := range km.Pixels {
 			km.assignClusters(clr)
@@ -100,16 +96,16 @@ func (km *Kmeans) Run(pixels []color.Color) []color.Color {
 
 	centroids := []color.Color{}
 	for _, cluster := range km.Clusters {
-		centroids = append(centroids, *cluster.Centroid)
+		centroids = append(centroids, cluster.Centroid)
 	}
 	return centroids
 }
 
-func (km *Kmeans) assignClusters(clr color.Color) {
+func (km Kmeans) assignClusters(clr color.Color) {
 	shortest := math.MaxFloat64
 	nearest := km.Clusters[0]
 	for _, cluster := range km.Clusters {
-		dist := calcDistance(*cluster.Centroid, clr)
+		dist := calcDistance(cluster.Centroid, clr)
 		if dist < shortest {
 			shortest = dist
 			nearest = cluster
@@ -117,13 +113,13 @@ func (km *Kmeans) assignClusters(clr color.Color) {
 	}
 	nearest.AddPoint(clr)
 }
-func (km *Kmeans) shouldExit(i int) bool {
+func (km Kmeans) shouldExit(i int) bool {
 	if len(km.OldClusters) == 0 {
 		return false
 	}
 
 	for idx := 0; idx < km.K; idx++ {
-		dist := calcDistance(*km.Clusters[idx].Centroid, km.OldClusters[idx])
+		dist := calcDistance(km.Clusters[idx].Centroid, km.OldClusters[idx])
 		if dist < float64(km.MinDistance) {
 			return true
 		}

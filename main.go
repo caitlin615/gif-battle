@@ -31,7 +31,7 @@ func main() {
 
 	// using k-means clustering
 	colors := getPixels(frame)
-	km := kmeans.NewKmeansClustering(3, 5, 2)
+	km := kmeans.NewKmeansClustering(2, 10, 10)
 	prominantColors := km.Run(colors)
 	for _, color := range prominantColors {
 		log.Println(colorToHex(color))
