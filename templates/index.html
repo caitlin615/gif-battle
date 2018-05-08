@@ -1,15 +1,16 @@
+{{ define "color" }}
+<p style="background-color: rgba({{.R}}, {{.G}}, {{.B}}, {{.A}}); color:{{if (lt .R 100) and (lt .G 100) and (lt .B 100)}}white{{end}};">{{.}}</p>
+{{ end }}
+
 {{ define "battleImage" }}
   <img src="{{.Image.URL}}">
   <h3>Kmeans</h3>
   {{ range .Colors }}
-  <p style="background-color: rgba({{.R}}, {{.G}}, {{.B}}, {{.A}});">{{.}}</p>
+    {{ template "color" . }}
   {{ end }}
 
-
   <h3>Most Common</h3>
-  {{with $c := .MostUsedColor}}
-  <p style="background-color: rgba({{$c.R}}, {{$c.G}}, {{$c.B}}, {{$c.A}});">{{$c}}</p>
-  {{end}}
+  {{ template "color" .MostUsedColor }}
 {{ end }}
 
 <html>
@@ -20,6 +21,10 @@
     display: flex;
     flex-flow: row wrap;
     margin: auto;
+  }
+  h1 {
+    margin: auto;
+    text-align: center;
   }
   div#left, div#right {
     flex: 0 0 40%;
